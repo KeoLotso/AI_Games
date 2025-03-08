@@ -1,11 +1,12 @@
 All Games:
 
 - https://keolotso.github.io/AI_Games/modern-flappy-bird.html
-- https://keolotso.github.io/AI_Games/dark-cookie-clicker
+- https://keolotso.github.io/AI_Games/dark-cookie-clicker.html
 - https://keolotso.github.io/AI_Games/mario-game.html
-- https://keolotso.github.io/AI_Games/minesweeper-game
-- https://keolotso.github.io/AI_Games/modern_tetris
-- https://keolotso.github.io/AI_Games/fruit-ninja-game
+- https://keolotso.github.io/AI_Games/minesweeper-game.html
+- https://keolotso.github.io/AI_Games/modern_tetris.html
+- https://keolotso.github.io/AI_Games/fruit-ninja-game.html
+- https://keolotso.github.io/AI_Games/angry-birds-inspired-game.html
 
 All of this was created by AI
 
@@ -17,3 +18,4 @@ Claude (https://claude.ai/):
 - minesweeper-game
 - modern_tetris
 - fruit-ninja-game
+- angry-birds-inspired-game
