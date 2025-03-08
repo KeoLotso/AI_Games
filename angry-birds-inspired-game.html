@@ -1,0 +1,657 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sling Launcher</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #67B26F, #4ca2cd);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        #game-container {
+            width: 100%;
+            max-width: 800px;
+            height: 500px;
+            position: relative;
+            background: url('/api/placeholder/800/500') no-repeat center center;
+            background-size: cover;
+            border-radius: 12px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        #game-canvas {
+            width: 100%;
+            height: 100%;
+        }
+        
+        #ui-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            z-index: 100;
+        }
+        
+        .score-panel {
+            background-color: rgba(255, 255, 255, 0.85);
+            padding: 10px 20px;
+            border-radius: 30px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .score-panel span {
+            font-weight: bold;
+            color: #333;
+        }
+        
+        #start-screen, #level-complete, #game-over {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.7);
+            z-index: 200;
+            color: white;
+        }
+        
+        #level-complete, #game-over {
+            display: none;
+        }
+        
+        h1 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        
+        .btn {
+            background-color: #FF5722;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 18px;
+            border-radius: 30px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        .btn:hover {
+            background-color: #E64A19;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
+        }
+        
+        .description {
+            max-width: 500px;
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 18px;
+            line-height: 1.5;
+        }
+        
+        .bird-counter {
+            display: flex;
+            gap: 5px;
+            margin-top: 10px;
+        }
+        
+        .bird-icon {
+            width: 30px;
+            height: 30px;
+            background-color: #F44336;
+            border-radius: 50%;
+            position: relative;
+        }
+        
+        .bird-icon::before, .bird-icon::after {
+            content: '';
+            position: absolute;
+            background-color: #FFB300;
+            border-radius: 50%;
+        }
+        
+        .bird-icon::before {
+            width: 10px;
+            height: 10px;
+            top: 6px;
+            left: 5px;
+        }
+        
+        .bird-icon::after {
+            width: 6px;
+            height: 6px;
+            top: 8px;
+            left: 18px;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <canvas id="game-canvas"></canvas>
+        
+        <div id="ui-container">
+            <div class="score-panel">
+                Score: <span id="score">0</span>
+            </div>
+            <div class="score-panel">
+                Birds left: <span id="birds-left">3</span>
+            </div>
+        </div>
+        
+        <div id="start-screen">
+            <h1>Sling Launcher</h1>
+            <p class="description">Drag to aim, release to launch! Destroy all the targets to complete the level. You have a limited number of birds - use them wisely!</p>
+            <div class="bird-counter">
+                <div class="bird-icon"></div>
+                <div class="bird-icon"></div>
+                <div class="bird-icon"></div>
+            </div>
+            <button id="start-btn" class="btn">Start Game</button>
+        </div>
+        
+        <div id="level-complete">
+            <h1>Level Complete!</h1>
+            <p class="description">Great job! You've destroyed all the targets!</p>
+            <p id="level-score" class="description">Score: 0</p>
+            <button id="next-level-btn" class="btn">Next Level</button>
+        </div>
+        
+        <div id="game-over">
+            <h1>Game Over</h1>
+            <p class="description">You ran out of birds! Better luck next time!</p>
+            <p id="final-score" class="description">Final score: 0</p>
+            <button id="restart-btn" class="btn">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game constants
+        const GRAVITY = 0.4;
+        const FRICTION = 1.02;
+        const MAX_PULL = 100;
+        const BIRD_RADIUS = 20;
+        const TARGET_RADIUS = 25;
+        const OBSTACLE_WIDTH = 20;
+        const OBSTACLE_HEIGHT = 80;
+        
+        // Game variables
+        let canvas, ctx;
+        let gameActive = false;
+        let birdsLeft = 3;
+        let score = 0;
+        let level = 1;
+        let slingPosition = { x: 100, y: 400 };
+        let bird = null;
+        let isDragging = false;
+        let pullBack = { x: 0, y: 0 };
+        let targets = [];
+        let obstacles = [];
+        
+        // DOM elements
+        const startScreen = document.getElementById('start-screen');
+        const levelCompleteScreen = document.getElementById('level-complete');
+        const gameOverScreen = document.getElementById('game-over');
+        const startBtn = document.getElementById('start-btn');
+        const nextLevelBtn = document.getElementById('next-level-btn');
+        const restartBtn = document.getElementById('restart-btn');
+        const scoreDisplay = document.getElementById('score');
+        const birdsLeftDisplay = document.getElementById('birds-left');
+        const levelScoreDisplay = document.getElementById('level-score');
+        const finalScoreDisplay = document.getElementById('final-score');
+        
+        // Initialize the game
+        function init() {
+            canvas = document.getElementById('game-canvas');
+            ctx = canvas.getContext('2d');
+            
+            // Set canvas size
+            resizeCanvas();
+            window.addEventListener('resize', resizeCanvas);
+            
+            // Button event listeners
+            startBtn.addEventListener('click', startGame);
+            nextLevelBtn.addEventListener('click', nextLevel);
+            restartBtn.addEventListener('click', restartGame);
+            
+            // Mouse/touch event listeners for the slingshot mechanic
+            canvas.addEventListener('mousedown', startDrag);
+            canvas.addEventListener('mousemove', drag);
+            canvas.addEventListener('mouseup', release);
+            canvas.addEventListener('touchstart', handleTouch);
+            canvas.addEventListener('touchmove', handleTouch);
+            canvas.addEventListener('touchend', handleTouchEnd);
+        }
+        
+        function resizeCanvas() {
+            canvas.width = canvas.clientWidth;
+            canvas.height = canvas.clientHeight;
+            
+            // Adjust sling position based on canvas size
+            slingPosition = { 
+                x: canvas.width * 0.15, 
+                y: canvas.height * 0.8 
+            };
+            
+            // If game is active, redraw the scene
+            if (gameActive) {
+                draw();
+            }
+        }
+        
+        function startGame() {
+            startScreen.style.display = 'none';
+            gameActive = true;
+            birdsLeft = 3;
+            score = 0;
+            level = 1;
+            updateUI();
+            resetBird();
+            createLevel();
+            gameLoop();
+        }
+        
+        function nextLevel() {
+            levelCompleteScreen.style.display = 'none';
+            level++;
+            birdsLeft = 3;
+            updateUI();
+            resetBird();
+            createLevel();
+        }
+        
+        function restartGame() {
+            gameOverScreen.style.display = 'none';
+            birdsLeft = 3;
+            score = 0;
+            level = 1;
+            updateUI();
+            resetBird();
+            createLevel();
+        }
+        
+        function createLevel() {
+            // Clear existing targets and obstacles
+            targets = [];
+            obstacles = [];
+            
+            // Create targets
+            const numTargets = Math.min(3 + level, 8);
+            for (let i = 0; i < numTargets; i++) {
+                targets.push({
+                    x: canvas.width * (0.6 + (Math.random() * 0.3)),
+                    y: canvas.height * (0.4 + (Math.random() * 0.4)),
+                    radius: TARGET_RADIUS,
+                    color: '#4CAF50',
+                    isHit: false
+                });
+            }
+            
+            // Create obstacles
+            const numObstacles = Math.min(level, 5);
+            for (let i = 0; i < numObstacles; i++) {
+                obstacles.push({
+                    x: canvas.width * (0.4 + (Math.random() * 0.4)),
+                    y: canvas.height * (0.4 + (Math.random() * 0.4)),
+                    width: OBSTACLE_WIDTH,
+                    height: OBSTACLE_HEIGHT,
+                    color: '#795548'
+                });
+            }
+        }
+        
+        function resetBird() {
+            bird = {
+                x: slingPosition.x,
+                y: slingPosition.y,
+                vx: 0,
+                vy: 0,
+                radius: BIRD_RADIUS,
+                color: '#F44336',
+                isLaunched: false
+            };
+            pullBack = { x: 0, y: 0 };
+        }
+        
+        function updateUI() {
+            scoreDisplay.textContent = score;
+            birdsLeftDisplay.textContent = birdsLeft;
+            levelScoreDisplay.textContent = `Score: ${score}`;
+            finalScoreDisplay.textContent = `Final score: ${score}`;
+        }
+        
+        function startDrag(e) {
+            if (!gameActive || bird.isLaunched) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Check if mouse is close to bird
+            const dx = mouseX - bird.x;
+            const dy = mouseY - bird.y;
+            const distance = Math.sqrt(dx * dx + dy * dy);
+            
+            if (distance < bird.radius * 2) {
+                isDragging = true;
+            }
+        }
+        
+        function drag(e) {
+            if (!isDragging || !gameActive || bird.isLaunched) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const mouseX = e.clientX - rect.left;
+            const mouseY = e.clientY - rect.top;
+            
+            // Calculate pull distance
+            let dx = mouseX - slingPosition.x;
+            let dy = mouseY - slingPosition.y;
+            
+            // Limit pull distance
+            const pullDistance = Math.sqrt(dx * dx + dy * dy);
+            if (pullDistance > MAX_PULL) {
+                dx = (dx / pullDistance) * MAX_PULL;
+                dy = (dy / pullDistance) * MAX_PULL;
+            }
+            
+            pullBack = { x: dx, y: dy };
+            bird.x = slingPosition.x + pullBack.x;
+            bird.y = slingPosition.y + pullBack.y;
+            
+            draw();
+        }
+        
+        function release() {
+            if (!isDragging || !gameActive || bird.isLaunched) return;
+            
+            isDragging = false;
+            
+            // Launch bird in opposite direction of pull
+            bird.vx = -pullBack.x * 0.15;
+            bird.vy = -pullBack.y * 0.15;
+            bird.isLaunched = true;
+        }
+        
+        function handleTouch(e) {
+            e.preventDefault();
+            
+            if (e.type === 'touchstart') {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousedown', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                startDrag(mouseEvent);
+            } else if (e.type === 'touchmove') {
+                const touch = e.touches[0];
+                const mouseEvent = new MouseEvent('mousemove', {
+                    clientX: touch.clientX,
+                    clientY: touch.clientY
+                });
+                drag(mouseEvent);
+            }
+        }
+        
+        function handleTouchEnd(e) {
+            e.preventDefault();
+            release();
+        }
+        
+        function update() {
+            if (!gameActive) return;
+            
+            if (bird.isLaunched) {
+                // Apply gravity and friction
+                bird.vy += GRAVITY;
+                bird.vx *= FRICTION;
+                bird.vy *= FRICTION;
+                
+                // Update position
+                bird.x += bird.vx;
+                bird.y += bird.vy;
+                
+                // Check for collisions with targets
+                targets.forEach(target => {
+                    if (!target.isHit) {
+                        const dx = target.x - bird.x;
+                        const dy = target.y - bird.y;
+                        const distance = Math.sqrt(dx * dx + dy * dy);
+                        
+                        if (distance < bird.radius + target.radius) {
+                            target.isHit = true;
+                            score += 100 * level;
+                            updateUI();
+                        }
+                    }
+                });
+                
+                // Check for collisions with obstacles
+                obstacles.forEach(obstacle => {
+                    const closestX = Math.max(obstacle.x, Math.min(bird.x, obstacle.x + obstacle.width));
+                    const closestY = Math.max(obstacle.y, Math.min(bird.y, obstacle.y + obstacle.height));
+                    
+                    const dx = bird.x - closestX;
+                    const dy = bird.y - closestY;
+                    const distance = Math.sqrt(dx * dx + dy * dy);
+                    
+                    if (distance < bird.radius) {
+                        // Simple bounce
+                        if (Math.abs(dx) > Math.abs(dy)) {
+                            bird.vx = -bird.vx * 0.7;
+                        } else {
+                            bird.vy = -bird.vy * 0.7;
+                        }
+                    }
+                });
+                
+                // Check if bird is out of bounds
+                if (bird.x < -bird.radius || 
+                    bird.x > canvas.width + bird.radius || 
+                    bird.y > canvas.height + bird.radius) {
+                    // Bird is out of bounds
+                    birdsLeft--;
+                    updateUI();
+                    
+                    if (birdsLeft <= 0) {
+                        // Check if all targets are hit
+                        if (targets.every(target => target.isHit)) {
+                            levelComplete();
+                        } else {
+                            gameOver();
+                        }
+                    } else {
+                        // Reset bird for next shot
+                        resetBird();
+                    }
+                }
+            }
+            
+            // Check if all targets are hit
+            if (targets.every(target => target.isHit)) {
+                levelComplete();
+            }
+        }
+        
+        function draw() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw ground
+            ctx.fillStyle = '#8D6E63';
+            ctx.fillRect(0, canvas.height * 0.85, canvas.width, canvas.height * 0.15);
+            
+            // Draw slingshot
+            ctx.strokeStyle = '#5D4037';
+            ctx.lineWidth = 10;
+            ctx.beginPath();
+            ctx.moveTo(slingPosition.x - 20, canvas.height * 0.85);
+            ctx.lineTo(slingPosition.x, slingPosition.y - 30);
+            ctx.lineTo(slingPosition.x + 20, canvas.height * 0.85);
+            ctx.stroke();
+            
+            // Draw sling bands if dragging
+            if (isDragging && !bird.isLaunched) {
+                ctx.strokeStyle = '#795548';
+                ctx.lineWidth = 5;
+                ctx.beginPath();
+                ctx.moveTo(slingPosition.x - 15, slingPosition.y - 20);
+                ctx.lineTo(bird.x, bird.y);
+                ctx.moveTo(slingPosition.x + 15, slingPosition.y - 20);
+                ctx.lineTo(bird.x, bird.y);
+                ctx.stroke();
+            }
+            
+            // Draw obstacles
+            obstacles.forEach(obstacle => {
+                ctx.fillStyle = obstacle.color;
+                ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+            });
+            
+            // Draw targets
+            targets.forEach(target => {
+                ctx.fillStyle = target.isHit ? '#BDBDBD' : target.color;
+                ctx.beginPath();
+                ctx.arc(target.x, target.y, target.radius, 0, Math.PI * 2);
+                ctx.fill();
+                
+                // Draw target eyes
+                if (!target.isHit) {
+                    ctx.fillStyle = 'white';
+                    ctx.beginPath();
+                    ctx.arc(target.x - 8, target.y - 5, 5, 0, Math.PI * 2);
+                    ctx.arc(target.x + 8, target.y - 5, 5, 0, Math.PI * 2);
+                    ctx.fill();
+                    
+                    ctx.fillStyle = 'black';
+                    ctx.beginPath();
+                    ctx.arc(target.x - 8, target.y - 5, 2, 0, Math.PI * 2);
+                    ctx.arc(target.x + 8, target.y - 5, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                } else {
+                    // X eyes for hit targets
+                    ctx.strokeStyle = 'black';
+                    ctx.lineWidth = 2;
+                    
+                    // Left X
+                    ctx.beginPath();
+                    ctx.moveTo(target.x - 12, target.y - 8);
+                    ctx.lineTo(target.x - 4, target.y - 2);
+                    ctx.moveTo(target.x - 4, target.y - 8);
+                    ctx.lineTo(target.x - 12, target.y - 2);
+                    ctx.stroke();
+                    
+                    // Right X
+                    ctx.beginPath();
+                    ctx.moveTo(target.x + 4, target.y - 8);
+                    ctx.lineTo(target.x + 12, target.y - 2);
+                    ctx.moveTo(target.x + 12, target.y - 8);
+                    ctx.lineTo(target.x + 4, target.y - 2);
+                    ctx.stroke();
+                }
+            });
+            
+            // Draw bird
+            ctx.fillStyle = bird.color;
+            ctx.beginPath();
+            ctx.arc(bird.x, bird.y, bird.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw bird face
+            ctx.fillStyle = 'white';
+            ctx.beginPath();
+            ctx.arc(bird.x + 8, bird.y - 5, 8, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = 'black';
+            ctx.beginPath();
+            ctx.arc(bird.x + 10, bird.y - 5, 4, 0, Math.PI * 2);
+            ctx.fill();
+            
+            ctx.fillStyle = '#FFB300';
+            ctx.beginPath();
+            ctx.moveTo(bird.x + 15, bird.y);
+            ctx.lineTo(bird.x + 25, bird.y + 5);
+            ctx.lineTo(bird.x + 15, bird.y + 10);
+            ctx.closePath();
+            ctx.fill();
+            
+            // Draw trajectory guide if dragging
+            if (isDragging && !bird.isLaunched) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
+                ctx.setLineDash([5, 5]);
+                ctx.beginPath();
+                ctx.moveTo(bird.x, bird.y);
+                
+                let guideX = bird.x;
+                let guideY = bird.y;
+                let guideVx = -pullBack.x * 0.15;
+                let guideVy = -pullBack.y * 0.15;
+                
+                for (let i = 0; i < 10; i++) {
+                    guideVy += GRAVITY;
+                    guideVx *= FRICTION;
+                    guideVy *= FRICTION;
+                    
+                    guideX += guideVx;
+                    guideY += guideVy;
+                    
+                    ctx.lineTo(guideX, guideY);
+                }
+                
+                ctx.stroke();
+                ctx.setLineDash([]);
+            }
+        }
+        
+        function gameLoop() {
+            if (!gameActive) return;
+            
+            update();
+            draw();
+            
+            requestAnimationFrame(gameLoop);
+        }
+        
+        function levelComplete() {
+            gameActive = false;
+            levelScoreDisplay.textContent = `Score: ${score}`;
+            levelCompleteScreen.style.display = 'flex';
+        }
+        
+        function gameOver() {
+            gameActive = false;
+            finalScoreDisplay.textContent = `Final score: ${score}`;
+            gameOverScreen.style.display = 'flex';
+        }
+        
+        // Start the game when the page loads
+        window.onload = init;
+    </script>
+</body>
+</html>
