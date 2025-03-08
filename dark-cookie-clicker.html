@@ -1,0 +1,862 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dark Cookie Clicker</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Arial', sans-serif;
+    }
+    
+    body {
+      background-color: #121212;
+      color: #f5f5f5;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    .container {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      width: 100%;
+      max-width: 800px;
+      padding: 2rem;
+    }
+    
+    .header {
+      margin-bottom: 2rem;
+      text-align: center;
+      position: relative;
+    }
+    
+    .title {
+      font-size: 3rem;
+      background: linear-gradient(45deg, #ff7b00, #ff9e00);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      margin-bottom: 0.5rem;
+    }
+    
+    .counter {
+      font-size: 2.5rem;
+      margin-bottom: 2rem;
+      text-shadow: 0 0 10px rgba(255, 123, 0, 0.5);
+    }
+    
+    .cookie-container {
+      position: relative;
+      cursor: pointer;
+      margin-bottom: 2rem;
+      transition: transform 0.1s;
+    }
+    
+    .cookie {
+      width: 200px;
+      height: 200px;
+      border-radius: 50%;
+      box-shadow: 0 0 20px rgba(139, 69, 19, 0.6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      position: relative;
+      transition: all 0.2s;
+    }
+    
+    .cookie-classic {
+      background: radial-gradient(#8b4513, #532a0e);
+    }
+    
+    .cookie-golden {
+      background: radial-gradient(#ffd700, #daa520);
+    }
+    
+    .cookie-chocolate {
+      background: radial-gradient(#3c1414, #1e0a0a);
+    }
+    
+    .cookie-galaxy {
+      background: radial-gradient(#6900ff, #000066);
+      background-image: 
+        radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+        radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+        radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px);
+    }
+    
+    .cookie-rainbow {
+      background: conic-gradient(red, orange, yellow, green, blue, indigo, violet, red);
+      animation: spin 5s linear infinite;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .cookie::before {
+      content: '';
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background-image: radial-gradient(circle, transparent 30%, rgba(0,0,0,0.2) 70%);
+      opacity: 0.3;
+    }
+    
+    .cookie-chips {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+    }
+    
+    .chip {
+      position: absolute;
+      border-radius: 50%;
+    }
+    
+    .chip-classic {
+      background-color: #462000;
+    }
+    
+    .chip-golden {
+      background-color: #b8860b;
+    }
+    
+    .chip-chocolate {
+      background-color: #ffffff;
+    }
+    
+    .chip-galaxy {
+      background-color: #ff00ff;
+      box-shadow: 0 0 5px #ff00ff;
+    }
+    
+    .chip-rainbow {
+      background-color: #ffffff;
+      box-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+    }
+    
+    .cookie-container:active .cookie {
+      transform: scale(0.95);
+    }
+    
+    .particle {
+      position: absolute;
+      border-radius: 50%;
+      pointer-events: none;
+      opacity: 0.8;
+    }
+    
+    .upgrades {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 1rem;
+      width: 100%;
+    }
+    
+    .upgrade {
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      padding: 1rem;
+      transition: all 0.2s;
+      border: 1px solid #333;
+      cursor: pointer;
+    }
+    
+    .upgrade:hover {
+      transform: translateY(-5px);
+      box-shadow: 0 5px 15px rgba(255, 123, 0, 0.2);
+    }
+    
+    .upgrade h3 {
+      margin-bottom: 0.5rem;
+      color: #ff9e00;
+    }
+    
+    .upgrade p {
+      margin-bottom: 0.5rem;
+      font-size: 0.9rem;
+      color: #aaa;
+    }
+    
+    .upgrade-cost {
+      font-weight: bold;
+      color: #ffd700;
+    }
+    
+    .btn-buy {
+      margin-top: 0.5rem;
+      background-color: #333;
+      color: #fff;
+      border: none;
+      padding: 0.5rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      width: 100%;
+    }
+    
+    .btn-buy:hover:not(:disabled) {
+      background-color: #444;
+    }
+    
+    .btn-buy:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    @keyframes float {
+      0% { transform: translateY(0px); }
+      50% { transform: translateY(-10px); }
+      100% { transform: translateY(0px); }
+    }
+    
+    .cookie-container {
+      animation: float 3s ease-in-out infinite;
+    }
+    
+    .stats {
+      margin: 1rem 0;
+      font-size: 0.9rem;
+      color: #aaa;
+      text-align: center;
+    }
+    
+    .cps {
+      font-weight: bold;
+      color: #ff9e00;
+    }
+    
+    .rebirth-container {
+      margin-top: 2rem;
+      background-color: #1e1e1e;
+      border-radius: 10px;
+      padding: 1rem;
+      text-align: center;
+      width: 100%;
+      border: 1px solid #333;
+    }
+    
+    .rebirth-title {
+      font-size: 1.5rem;
+      color: #ff9e00;
+      margin-bottom: 0.5rem;
+    }
+    
+    .prestige-points {
+      font-size: 1.2rem;
+      margin-bottom: 1rem;
+      color: #ffd700;
+    }
+    
+    .btn-rebirth {
+      background: linear-gradient(45deg, #ff7b00, #ff9e00);
+      color: #fff;
+      border: none;
+      padding: 0.8rem 1.5rem;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: bold;
+      margin-bottom: 1rem;
+    }
+    
+    .btn-rebirth:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(255, 123, 0, 0.3);
+    }
+    
+    .btn-rebirth:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+    
+    .skin-selector {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+    
+    .skin-option {
+      width: 60px;
+      height: 60px;
+      border-radius: 50%;
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    
+    .skin-option.selected {
+      border: 2px solid #ff9e00;
+      transform: scale(1.1);
+    }
+    
+    .skin-option:hover {
+      transform: scale(1.1);
+    }
+    
+    .skin-classic {
+      background: radial-gradient(#8b4513, #532a0e);
+    }
+    
+    .skin-golden {
+      background: radial-gradient(#ffd700, #daa520);
+    }
+    
+    .skin-chocolate {
+      background: radial-gradient(#3c1414, #1e0a0a);
+    }
+    
+    .skin-galaxy {
+      background: radial-gradient(#6900ff, #000066);
+      background-image: 
+        radial-gradient(white, rgba(255,255,255,.2) 2px, transparent 40px),
+        radial-gradient(white, rgba(255,255,255,.15) 1px, transparent 30px),
+        radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 40px);
+      background-size: 550px 550px, 350px 350px, 250px 250px;
+      background-position: 0 0, 40px 60px, 130px 270px;
+    }
+    
+    .skin-rainbow {
+      background: conic-gradient(red, orange, yellow, green, blue, indigo, violet, red);
+    }
+    
+    .tabs {
+      display: flex;
+      width: 100%;
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #333;
+    }
+    
+    .tab {
+      padding: 0.8rem 1.5rem;
+      cursor: pointer;
+      color: #aaa;
+      transition: all 0.2s;
+    }
+    
+    .tab.active {
+      color: #ff9e00;
+      border-bottom: 2px solid #ff9e00;
+    }
+    
+    .tab-content {
+      display: none;
+      width: 100%;
+    }
+    
+    .tab-content.active {
+      display: block;
+    }
+    
+    /* Cheat menu */
+    .cheat-button {
+      position: absolute;
+      top: 0;
+      right: 0;
+      font-size: 1.2rem;
+      background: none;
+      border: none;
+      color: #333;
+      cursor: pointer;
+      padding: 0.5rem;
+      transition: all 0.3s;
+    }
+    
+    .cheat-button:hover {
+      color: #ff9e00;
+      transform: scale(1.1);
+    }
+    
+    .cheat-modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.8);
+      z-index: 100;
+      align-items: center;
+      justify-content: center;
+    }
+    
+    .cheat-content {
+      background: #1a1a1a;
+      border: 2px solid #ff9e00;
+      border-radius: 10px;
+      padding: 1.5rem;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      position: relative;
+      animation: slideDown 0.3s forwards;
+    }
+    
+    @keyframes slideDown {
+      from { transform: translateY(-50px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    
+    .close-cheat {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      font-size: 1.5rem;
+      background: none;
+      border: none;
+      color: #aaa;
+      cursor: pointer;
+    }
+    
+    .close-cheat:hover {
+      color: #ff9e00;
+    }
+    
+    .cheat-title {
+      font-size: 1.8rem;
+      color: #ff9e00;
+      margin-bottom: 1rem;
+      text-align: center;
+    }
+    
+    .cheat-section {
+      margin-bottom: 1.5rem;
+      border-bottom: 1px solid #333;
+      padding-bottom: 1rem;
+    }
+    
+    .cheat-section:last-child {
+      border-bottom: none;
+      margin-bottom: 0;
+    }
+    
+    .cheat-section h3 {
+      color: #ff9e00;
+      margin-bottom: 0.8rem;
+    }
+    
+    .cheat-input {
+      display: flex;
+      align-items: center;
+      margin-bottom: 0.8rem;
+    }
+    
+    .cheat-input label {
+      flex: 1;
+      margin-right: 1rem;
+    }
+    
+    .cheat-input input[type="number"],
+    .cheat-input input[type="text"] {
+      background-color: #333;
+      border: 1px solid #444;
+      color: #fff;
+      padding: 0.5rem;
+      border-radius: 4px;
+      width: 120px;
+    }
+    
+    .cheat-input input[type="range"] {
+      width: 120px;
+    }
+    
+    .cheat-button-large {
+      background: linear-gradient(45deg, #ff7b00, #ff9e00);
+      color: #fff;
+      border: none;
+      padding: 0.7rem 1rem;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      margin-top: 0.5rem;
+      width: 100%;
+      transition: all 0.2s;
+    }
+    
+    .cheat-button-large:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 2px 8px rgba(255, 123, 0, 0.5);
+    }
+    
+    .achievement {
+      display: none;
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: rgba(26, 26, 26, 0.9);
+      border-left: 4px solid #ff9e00;
+      padding: 1rem;
+      border-radius: 5px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+      z-index: 50;
+      animation: slideIn 0.5s forwards;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    .achievement h3 {
+      color: #ff9e00;
+      margin-bottom: 0.5rem;
+    }
+    
+    .achievement p {
+      color: #ddd;
+      font-size: 0.9rem;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="header">
+      <h1 class="title">Dark Cookie Clicker</h1>
+      <p>Click the cookie to earn more cookies!</p>
+      <button class="cheat-button" id="openCheatMenu">⚙️</button>
+    </div>
+    
+    <div class="counter" id="cookieCounter">0 cookies</div>
+    
+    <div class="cookie-container" id="cookieBtn">
+      <div class="cookie cookie-classic" id="cookieImg">
+        <div class="cookie-chips" id="cookieChips"></div>
+      </div>
+    </div>
+    
+    <div class="stats">
+      <p>Cookies per second: <span class="cps" id="cpsDisplay">0.0</span></p>
+      <p>Prestige level: <span id="prestigeLevel">0</span></p>
+      <p>CPS Multiplier: <span id="multiplierDisplay">x1.0</span></p>
+    </div>
+    
+    <div class="tabs">
+      <div class="tab active" id="tabUpgrades">Upgrades</div>
+      <div class="tab" id="tabPrestige">Prestige</div>
+    </div>
+    
+    <div class="tab-content active" id="contentUpgrades">
+      <div class="upgrades" id="upgradesContainer">
+        <!-- Upgrades will be generated here -->
+      </div>
+    </div>
+    
+    <div class="tab-content" id="contentPrestige">
+      <div class="rebirth-container">
+        <h2 class="rebirth-title">Prestige System</h2>
+        <p>Rebirth to earn prestige points and boost your cookie production!</p>
+        <p class="prestige-points">Next rebirth: <span id="nextPrestigePoints">0</span> prestige points</p>
+        <p>(You need at least 1,000 cookies to rebirth)</p>
+        <button class="btn-rebirth" id="rebirthBtn" disabled>REBIRTH</button>
+        
+        <h3>Cookie Skins</h3>
+        <p>Unlock new skins by reaching prestige levels!</p>
+        
+        <div class="skin-selector" id="skinSelector">
+          <div class="skin-option skin-classic selected" data-skin="classic" title="Classic (Default)"></div>
+          <div class="skin-option skin-golden" data-skin="golden" title="Golden (Prestige 1)"></div>
+          <div class="skin-option skin-chocolate" data-skin="chocolate" title="Chocolate (Prestige 3)"></div>
+          <div class="skin-option skin-galaxy" data-skin="galaxy" title="Galaxy (Prestige 5)"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Cheat Menu Modal -->
+  <div class="cheat-modal" id="cheatModal">
+    <div class="cheat-content">
+      <button class="close-cheat" id="closeCheatMenu">×</button>
+      <h2 class="cheat-title">🍪 Cheat Menu 🍪</h2>
+      
+      <div class="cheat-section">
+        <h3>Resources</h3>
+        <div class="cheat-input">
+          <label>Set Cookies</label>
+          <input type="number" id="cheatCookies" min="0" step="1000">
+        </div>
+        <div class="cheat-input">
+          <label>Set Prestige Points</label>
+          <input type="number" id="cheatPrestige" min="0" step="1">
+        </div>
+        <button class="cheat-button-large" id="applyResourceCheats">Apply Resources</button>
+      </div>
+      
+      <div class="cheat-section">
+        <h3>Gameplay</h3>
+        <div class="cheat-input">
+          <label>Cookies Per Click</label>
+          <input type="number" id="cheatCPC" min="1" step="10" value="1">
+        </div>
+        <div class="cheat-input">
+          <label>CPS Multiplier</label>
+          <input type="number" id="cheatMultiplier" min="1" step="1" value="1">
+        </div>
+        <button class="cheat-button-large" id="applyGameplayCheats">Apply Gameplay</button>
+      </div>
+      
+      <div class="cheat-section">
+        <h3>Upgrades</h3>
+        <button class="cheat-button-large" id="buyAllUpgrades">Buy Max Upgrades</button>
+        <button class="cheat-button-large" id="unlockAllUpgrades">Unlock All Upgrades</button>
+      </div>
+      
+      <div class="cheat-section">
+        <h3>Special</h3>
+        <div class="cheat-input">
+          <label>Activate Rainbow Cookie</label>
+          <input type="checkbox" id="cheatRainbowCookie">
+        </div>
+        <div class="cheat-input">
+          <label>Auto Click (per second)</label>
+          <input type="range" id="cheatAutoClick" min="0" max="100" value="0" step="1">
+          <span id="autoClickValue">0</span>
+        </div>
+        <button class="cheat-button-large" id="secretAchievement">Secret Achievement</button>
+      </div>
+    </div>
+  </div>
+  
+  <!-- Achievement Notification -->
+  <div class="achievement" id="achievementNotif">
+    <h3>🏆 Achievement Unlocked!</h3>
+    <p id="achievementText">You've unlocked a secret achievement!</p>
+  </div>
+
+  <script>
+    // Game state
+    const game = {
+      cookies: 0,
+      cookiesPerClick: 1,
+      cookiesPerSecond: 0,
+      lastUpdate: Date.now(),
+      prestigePoints: 0,
+      prestigeLevel: 0,
+      multiplier: 1,
+      currentSkin: 'classic',
+      unlockedSkins: ['classic'],
+      autoClickInterval: null,
+      autoClickSpeed: 0,
+      rainbowActivated: false,
+      
+      // Upgrades data
+      upgrades: [
+        { id: 'cursor', name: 'Cursor', description: 'Auto-clicks once every 10 seconds', baseCost: 15, cps: 0.1, owned: 0 },
+        { id: 'grandma', name: 'Grandma', description: 'Bakes 1 cookie per second', baseCost: 100, cps: 1, owned: 0 },
+        { id: 'farm', name: 'Cookie Farm', description: 'Grows 8 cookies per second', baseCost: 1100, cps: 8, owned: 0 },
+        { id: 'mine', name: 'Cookie Mine', description: 'Mines 47 cookies per second', baseCost: 12000, cps: 47, owned: 0 }
+      ]
+    };
+    
+    // DOM Elements
+    const cookieBtn = document.getElementById('cookieBtn');
+    const cookieImg = document.getElementById('cookieImg');
+    const cookieChips = document.getElementById('cookieChips');
+    const cookieCounter = document.getElementById('cookieCounter');
+    const cpsDisplay = document.getElementById('cpsDisplay');
+    const upgradesContainer = document.getElementById('upgradesContainer');
+    const rebirthBtn = document.getElementById('rebirthBtn');
+    const nextPrestigePoints = document.getElementById('nextPrestigePoints');
+    const prestigeLevel = document.getElementById('prestigeLevel');
+    const multiplierDisplay = document.getElementById('multiplierDisplay');
+    const skinSelector = document.getElementById('skinSelector');
+    const tabUpgrades = document.getElementById('tabUpgrades');
+    const tabPrestige = document.getElementById('tabPrestige');
+    const contentUpgrades = document.getElementById('contentUpgrades');
+    const contentPrestige = document.getElementById('contentPrestige');
+    
+    // Cheat menu elements
+    const openCheatMenu = document.getElementById('openCheatMenu');
+    const closeCheatMenu = document.getElementById('closeCheatMenu');
+    const cheatModal = document.getElementById('cheatModal');
+    
+    const cheatCookies = document.getElementById('cheatCookies');
+    const cheatPrestige = document.getElementById('cheatPrestige');
+    const cheatCPC = document.getElementById('cheatCPC');
+    const cheatMultiplier = document.getElementById('cheatMultiplier');
+    const cheatRainbowCookie = document.getElementById('cheatRainbowCookie');
+    const cheatAutoClick = document.getElementById('cheatAutoClick');
+    const autoClickValue = document.getElementById('autoClickValue');
+    
+    const applyResourceCheats = document.getElementById('applyResourceCheats');
+    const applyGameplayCheats = document.getElementById('applyGameplayCheats');
+    const buyAllUpgrades = document.getElementById('buyAllUpgrades');
+    const unlockAllUpgrades = document.getElementById('unlockAllUpgrades');
+    const secretAchievement = document.getElementById('secretAchievement');
+    
+    const achievementNotif = document.getElementById('achievementNotif');
+    const achievementText = document.getElementById('achievementText');
+    
+    // Generate cookie chips
+    function generateChips() {
+      cookieChips.innerHTML = '';
+      const chipClass = 'chip-' + game.currentSkin;
+      
+      for (let i = 0; i < 10; i++) {
+        const chip = document.createElement('div');
+        chip.classList.add('chip', chipClass);
+        
+        // Random size between 10px and 20px
+        const size = Math.random() * 10 + 10;
+        chip.style.width = `${size}px`;
+        chip.style.height = `${size}px`;
+        
+        // Random position
+        const left = Math.random() * 100;
+        const top = Math.random() * 100;
+        chip.style.left = `${left}%`;
+        chip.style.top = `${top}%`;
+        
+        cookieChips.appendChild(chip);
+      }
+    }
+    
+    // Create particles when clicking cookie
+    function createParticles() {
+      for (let i = 0; i < 5; i++) {
+        const particle = document.createElement('div');
+        particle.classList.add('particle');
+        
+        // Different particle colors based on skin
+        let particleColor;
+        switch(game.currentSkin) {
+          case 'golden':
+            particleColor = '#ffd700';
+            break;
+          case 'chocolate':
+            particleColor = '#ffffff';
+            break;
+          case 'galaxy':
+            particleColor = '#ff00ff';
+            break;
+          case 'rainbow':
+            // Rainbow particles
+            const colors = ['#ff0000', '#ff7f00', '#ffff00', '#00ff00', '#0000ff', '#4b0082', '#9400d3'];
+            particleColor = colors[Math.floor(Math.random() * colors.length)];
+            break;
+          default:
+            particleColor = '#ffd700';
+        }
+        
+        particle.style.backgroundColor = particleColor;
+        
+        // Random size between 5px and 10px
+        const size = Math.random() * 5 + 5;
+        particle.style.width = `${size}px`;
+        particle.style.height = `${size}px`;
+        
+        // Position at the center of the cookie
+        const cookieRect = cookieBtn.getBoundingClientRect();
+        const x = cookieRect.left + cookieRect.width / 2;
+        const y = cookieRect.top + cookieRect.height / 2;
+        
+        // Random direction
+        const angle = Math.random() * Math.PI * 2;
+        const speed = Math.random() * 5 + 5;
+        const vx = Math.cos(angle) * speed;
+        const vy = Math.sin(angle) * speed;
+        
+        document.body.appendChild(particle);
+        
+        let posX = x;
+        let posY = y;
+        let opacity = 1;
+        let gravity = 0.1;
+        
+        // Animate the particle
+        const animateParticle = () => {
+          if (opacity <= 0) {
+            particle.remove();
+            return;
+          }
+          
+          posX += vx;
+          posY += vy;
+          vy += gravity;
+          opacity -= 0.02;
+          
+          particle.style.left = `${posX}px`;
+          particle.style.top = `${posY}px`;
+          particle.style.opacity = opacity;
+          
+          requestAnimationFrame(animateParticle);
+        };
+        
+        requestAnimationFrame(animateParticle);
+      }
+    }
+    
+    // Format numbers with abbreviations
+    function formatNumber(num) {
+      if (num >= 1000000000) {
+        return (num / 1000000000).toFixed(1) + 'B';
+      } else if (num >= 1000000) {
+        return (num / 1000000).toFixed(1) + 'M';
+      } else if (num >= 1000) {
+        return (num / 1000).toFixed(1) + 'K';
+      } else {
+        return Math.floor(num);
+      }
+    }
+    
+    // Update the counter display
+    function updateCounter() {
+      cookieCounter.textContent = `${formatNumber(game.cookies)} cookies`;
+      cpsDisplay.textContent = game.cookiesPerSecond.toFixed(1);
+      prestigeLevel.textContent = game.prestigeLevel;
+      multiplierDisplay.textContent = `x${game.multiplier.toFixed(1)}`;
+      
+      // Calculate next prestige points (square root of cookies / 1000)
+      const potentialPoints = Math.floor(Math.sqrt(game.cookies / 1000));
+      nextPrestigePoints.textContent = potentialPoints;
+      
+      // Enable rebirth button if we'd get at least 1 point
+      rebirthBtn.disabled = potentialPoints < 1;
+      
+      // Update upgrade buttons
+      game.upgrades.forEach(upgrade => {
+        const buyBtn = document.getElementById(`buy-${upgrade.id}`);
+        if (buyBtn) {
+          buyBtn.disabled = game.cookies < calculateUpgradeCost(upgrade);
+        }
+      });
+    }
+    
+    // Calculate upgrade cost based on how many are owned
+    function calculateUpgradeCost(upgrade) {
+      return Math.floor(upgrade.baseCost * Math.pow(1.15, upgrade.owned));
+    }
+    
+    // Calculate cookies per second
+    function calculateCPS() {
+      let total = 0;
+      game.upgrades.forEach(upgrade => {
+        total += upgrade.cps * upgrade.owned;
+      });
+      game.cookiesPerSecond = total * game.multiplier;
+    }
+    
+    // Generate upgrade elements
+    function generateUpgrades() {
+      upgradesContainer.innerHTML = '';
+      
+      game.upgrades.forEach(upgrade => {
+        const upgradeEl = document.createElement('div');
+        upgradeEl.classList.add('upgrade');
+        
+        const cost = calculateUpgradeCost(upgrade);
+        
+        upgradeEl.innerHTML = `
+          <h3>${upgrade.name}
