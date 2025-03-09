@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Color Simon</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #1a2a6c, #b21f1f, #fdbb2d);
+            overflow: hidden;
+        }
+
+        .container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background-color: rgba(255, 255, 255, 0.15);
+            backdrop-filter: blur(10px);
+            padding: 2rem;
+            border-radius: 20px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            max-width: 90%;
+            width: 500px;
+        }
+
+        h1 {
+            color: white;
+            margin-bottom: 1.5rem;
+            font-weight: 700;
+            text-align: center;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+            margin-bottom: 1.5rem;
+            width: 300px;
+            height: 300px;
+        }
+
+        .tile {
+            width: 100%;
+            height: 100%;
+            border-radius: 15px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            opacity: 0.8;
+        }
+
+        .tile.active {
+            transform: scale(0.95);
+            opacity: 1;
+            box-shadow: 0 0 20px rgba(255, 255, 255, 0.6);
+        }
+
+        .tile:hover {
+            transform: scale(0.98);
+        }
+
+        .controls {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            width: 100%;
+            margin-top: 1rem;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            background-color: rgba(255, 255, 255, 0.9);
+            border: none;
+            border-radius: 50px;
+            color: #333;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+
+        .btn:hover {
+            background-color: white;
+            transform: translateY(-2px);
+            box-shadow: 0 6px 12px rgba(0, 0, 0, 0.15);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .message {
+            color: white;
+            text-align: center;
+            font-weight: 500;
+            margin: 1rem 0;
+            min-height: 24px;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+
+        .score-container {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 1rem;
+        }
+
+        .score-box {
+            background-color: rgba(255, 255, 255, 0.2);
+            padding: 10px 20px;
+            border-radius: 10px;
+            color: white;
+            font-weight: 600;
+            text-align: center;
+            flex: 1;
+            margin: 0 5px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+
+        .score-box span {
+            font-size: 1.3rem;
+            display: block;
+            margin-top: 5px;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                padding: 1.5rem;
+            }
+            
+            .game-board {
+                width: 250px;
+                height: 250px;
+                gap: 10px;
+            }
+            
+            h1 {
+                font-size: 1.5rem;
+            }
+        }
+
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.05); }
+            100% { transform: scale(1); }
+        }
+
+        .pulse {
+            animation: pulse 0.5s ease;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Modern Color Simon</h1>
+        
+        <div class="score-container">
+            <div class="score-box">
+                Level
+                <span id="level">1</span>
+            </div>
+            <div class="score-box">
+                High Score
+                <span id="high-score">0</span>
+            </div>
+        </div>
+        
+        <div class="game-board">
+            <div class="tile" id="red" style="background-color: #ff4757;"></div>
+            <div class="tile" id="green" style="background-color: #2ed573;"></div>
+            <div class="tile" id="blue" style="background-color: #1e90ff;"></div>
+            <div class="tile" id="yellow" style="background-color: #ffa502;"></div>
+        </div>
+        
+        <div class="message" id="message">Press Start to play!</div>
+        
+        <div class="controls">
+            <button class="btn" id="start-btn">Start Game</button>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const tiles = document.querySelectorAll('.tile');
+            const startBtn = document.getElementById('start-btn');
+            const messageEl = document.getElementById('message');
+            const levelEl = document.getElementById('level');
+            const highScoreEl = document.getElementById('high-score');
+            
+            const colors = ['red', 'green', 'blue', 'yellow'];
+            const colorMap = {
+                red: document.getElementById('red'),
+                green: document.getElementById('green'),
+                blue: document.getElementById('blue'),
+                yellow: document.getElementById('yellow')
+            };
+            
+            let sequence = [];
+            let playerSequence = [];
+            let level = 1;
+            let highScore = localStorage.getItem('simonHighScore') || 0;
+            let isPlaying = false;
+            let canPlayerClick = false;
+            
+            highScoreEl.textContent = highScore;
+            
+            // Sound effects
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            
+            function playTone(frequency, duration) {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.type = 'sine';
+                oscillator.frequency.value = frequency;
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.start();
+                
+                gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+                
+                oscillator.stop(audioContext.currentTime + duration);
+            }
+            
+            const tones = {
+                red: 261.63,    // C4
+                green: 329.63,  // E4
+                blue: 392.00,   // G4
+                yellow: 523.25  // C5
+            };
+            
+            // Highlight a tile
+            function highlightTile(color) {
+                return new Promise(resolve => {
+                    const tile = colorMap[color];
+                    playTone(tones[color], 0.3);
+                    
+                    tile.classList.add('active');
+                    
+                    setTimeout(() => {
+                        tile.classList.remove('active');
+                        setTimeout(resolve, 200);
+                    }, 400);
+                });
+            }
+            
+            // Show the sequence to the player
+            async function playSequence() {
+                canPlayerClick = false;
+                messageEl.textContent = 'Watch carefully...';
+                
+                for (const color of sequence) {
+                    await highlightTile(color);
+                }
+                
+                messageEl.textContent = 'Your turn!';
+                canPlayerClick = true;
+            }
+            
+            // Add a new color to the sequence
+            function addToSequence() {
+                const randomColor = colors[Math.floor(Math.random() * colors.length)];
+                sequence.push(randomColor);
+            }
+            
+            // Start a new game
+            function startGame() {
+                sequence = [];
+                playerSequence = [];
+                level = 1;
+                isPlaying = true;
+                levelEl.textContent = level;
+                messageEl.textContent = 'Get ready!';
+                startBtn.disabled = true;
+                
+                setTimeout(() => {
+                    addToSequence();
+                    playSequence();
+                }, 1000);
+            }
+            
+            // Handle player clicks
+            function handleTileClick(e) {
+                if (!isPlaying || !canPlayerClick) return;
+                
+                const clickedTile = e.target;
+                const clickedColor = clickedTile.id;
+                
+                highlightTile(clickedColor);
+                playerSequence.push(clickedColor);
+                
+                // Check if the player's move is correct
+                const currentIndex = playerSequence.length - 1;
+                
+                if (playerSequence[currentIndex] !== sequence[currentIndex]) {
+                    gameOver();
+                    return;
+                }
+                
+                // Check if the player completed the sequence
+                if (playerSequence.length === sequence.length) {
+                    canPlayerClick = false;
+                    
+                    setTimeout(() => {
+                        nextLevel();
+                    }, 1000);
+                }
+            }
+            
+            // Move to the next level
+            function nextLevel() {
+                level++;
+                levelEl.textContent = level;
+                playerSequence = [];
+                
+                if (level > highScore) {
+                    highScore = level - 1;
+                    highScoreEl.textContent = highScore;
+                    localStorage.setItem('simonHighScore', highScore);
+                }
+                
+                messageEl.textContent = `Level ${level}!`;
+                document.querySelector('.container').classList.add('pulse');
+                
+                setTimeout(() => {
+                    document.querySelector('.container').classList.remove('pulse');
+                    addToSequence();
+                    playSequence();
+                }, 1000);
+            }
+            
+            // Game over
+            function gameOver() {
+                isPlaying = false;
+                canPlayerClick = false;
+                
+                // Play error sound
+                playTone(100, 0.5);
+                
+                messageEl.textContent = `Game Over! You reached level ${level}`;
+                startBtn.disabled = false;
+                startBtn.textContent = 'Play Again';
+                
+                if (level - 1 > highScore) {
+                    highScore = level - 1;
+                    highScoreEl.textContent = highScore;
+                    localStorage.setItem('simonHighScore', highScore);
+                    messageEl.textContent += ' - New High Score!';
+                }
+            }
+            
+            // Event Listeners
+            startBtn.addEventListener('click', startGame);
+            
+            tiles.forEach(tile => {
+                tile.addEventListener('click', handleTileClick);
+            });
+        });
+    </script>
+</body>
+</html>
