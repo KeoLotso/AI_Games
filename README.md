@@ -10,6 +10,7 @@ All Games:
 - https://keolotso.github.io/AI_Games/donkey-kong-game.html
 - https://keolotso.github.io/AI_Games/space-invaders-game.html
 - https://keolotso.github.io/AI_Games/color-simon-game.html
+- https://keolotso.github.io/AI_Games/piano-tile-game.html
 
 All of this was created by AI
 
@@ -25,3 +26,4 @@ Claude (https://claude.ai/):
 - donkey-kong-game
 - space-invaders-game
 - color-simon-game
+- piano-tile-game
