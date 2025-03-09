@@ -7,6 +7,7 @@ All Games:
 - https://keolotso.github.io/AI_Games/modern_tetris.html
 - https://keolotso.github.io/AI_Games/fruit-ninja-game.html
 - https://keolotso.github.io/AI_Games/angry-birds-inspired-game.html
+- https://keolotso.github.io/AI_Games/donkey-kong-game.html
 
 All of this was created by AI
 
@@ -19,3 +20,4 @@ Claude (https://claude.ai/):
 - modern_tetris
 - fruit-ninja-game
 - angry-birds-inspired-game
+- donkey-kong-game.html
