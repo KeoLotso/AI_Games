@@ -1,0 +1,878 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Donkey Kong</title>
+    <style>
+        body {
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #121212;
+            font-family: 'Arial', sans-serif;
+            overflow: hidden;
+        }
+        
+        #game-container {
+            position: relative;
+            width: 600px;
+            height: 400px;
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            overflow: hidden;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.5);
+        }
+        
+        #game-canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+        }
+        
+        #ui-container {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            color: white;
+            font-size: 16px;
+            z-index: 10;
+        }
+        
+        .platform {
+            position: absolute;
+            height: 20px;
+            background-image: linear-gradient(to bottom, #4e7a9e, #3a5d7a);
+            border-radius: 5px;
+        }
+        
+        #player {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #e74c3c;
+            border-radius: 5px;
+            z-index: 5;
+        }
+        
+        .barrel {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #f39c12;
+            border-radius: 50%;
+            z-index: 3;
+            animation: spin 0.5s linear infinite;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        #gorilla {
+            position: absolute;
+            width: 50px;
+            height: 50px;
+            background-color: #8b4513;
+            border-radius: 5px;
+            z-index: 4;
+        }
+        
+        #princess {
+            position: absolute;
+            width: 30px;
+            height: 30px;
+            background-color: #ff69b4;
+            border-radius: 5px;
+            z-index: 2;
+        }
+        
+        .ladder {
+            position: absolute;
+            width: 30px;
+            background-color: #f1c40f;
+            opacity: 0.7;
+            z-index: 1;
+        }
+        
+        #game-over, #level-complete {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: rgba(0, 0, 0, 0.8);
+            color: white;
+            font-size: 32px;
+            z-index: 20;
+            display: none;
+        }
+        
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #e74c3c;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #c0392b;
+        }
+        
+        .particle {
+            position: absolute;
+            width: 5px;
+            height: 5px;
+            background-color: #e74c3c;
+            border-radius: 50%;
+            z-index: 6;
+        }
+        
+        #start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #1e1e1e;
+            color: white;
+            font-size: 32px;
+            z-index: 30;
+        }
+        
+        #start-screen h1 {
+            color: #e74c3c;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 5px rgba(0, 0, 0, 0.5);
+        }
+        
+        #start-screen p {
+            font-size: 16px;
+            margin-bottom: 30px;
+            text-align: center;
+            max-width: 80%;
+        }
+    </style>
+</head>
+<body>
+    <div id="game-container">
+        <div id="ui-container">
+            <div>Level: <span id="level">1</span></div>
+            <div>Score: <span id="score">0</span></div>
+            <div>Lives: <span id="lives">3</span></div>
+        </div>
+        <div id="start-screen">
+            <h1>Modern Donkey Kong</h1>
+            <p>Use arrow keys or WASD to move, and spacebar to jump.</p>
+            <button id="start-button">Start Game</button>
+        </div>
+        <div id="game-over">
+            <div>Game Over!</div>
+            <div>Score: <span id="final-score">0</span></div>
+            <button id="restart-button">Play Again</button>
+        </div>
+        <div id="level-complete">
+            <div>Level Complete!</div>
+            <div>Score: <span id="level-score">0</span></div>
+            <button id="next-level-button">Next Level</button>
+        </div>
+    </div>
+
+    <script>
+        // Game variables
+        let game = {
+            width: 600,
+            height: 400,
+            gravity: 0.5,
+            level: 1,
+            score: 0,
+            lives: 3,
+            isRunning: false,
+            platforms: [],
+            ladders: [],
+            barrels: [],
+            particles: [],
+            keys: {
+                left: false,
+                right: false,
+                up: false,
+                down: false,
+                space: false
+            },
+            lastBarrelTime: 0,
+            barrelInterval: 2000, // ms
+            debug: false
+        };
+
+        // Player object
+        let player = {
+            element: null,
+            x: 30,
+            y: 350,
+            width: 30,
+            height: 30,
+            velocityX: 0,
+            velocityY: 0,
+            speed: 5,
+            jumpStrength: 12,
+            isJumping: false,
+            isOnLadder: false,
+            facing: 'right',
+            update: function() {
+                // Handle horizontal movement
+                if (game.keys.left) {
+                    this.velocityX = -this.speed;
+                    this.facing = 'left';
+                } else if (game.keys.right) {
+                    this.velocityX = this.speed;
+                    this.facing = 'right';
+                } else {
+                    this.velocityX = 0;
+                }
+                
+                // Apply vertical movement - ladder climbing or gravity
+                if (this.isOnLadder) {
+                    if (game.keys.up) {
+                        this.velocityY = -this.speed;
+                    } else if (game.keys.down) {
+                        this.velocityY = this.speed;
+                    } else {
+                        this.velocityY = 0;
+                    }
+                } else {
+                    // Apply gravity
+                    this.velocityY += game.gravity;
+                    
+                    // Handle jumping
+                    if (game.keys.space && !this.isJumping) {
+                        this.velocityY = -this.jumpStrength;
+                        this.isJumping = true;
+                        createParticles(this.x + this.width/2, this.y + this.height, 10);
+                    }
+                }
+                
+                // Update position
+                this.x += this.velocityX;
+                this.y += this.velocityY;
+                
+                // Check wall collisions
+                if (this.x < 0) this.x = 0;
+                if (this.x + this.width > game.width) this.x = game.width - this.width;
+                if (this.y + this.height > game.height) {
+                    this.y = game.height - this.height;
+                    this.velocityY = 0;
+                    this.isJumping = false;
+                }
+                
+                // Update element position
+                this.element.style.left = this.x + 'px';
+                this.element.style.top = this.y + 'px';
+                
+                // Visual feedback for direction facing
+                if (this.facing === 'left') {
+                    this.element.style.borderRadius = '10px 5px 5px 5px';
+                } else {
+                    this.element.style.borderRadius = '5px 10px 5px 5px';
+                }
+            },
+            checkPlatformCollisions: function() {
+                this.isJumping = true; // Assume jumping unless on a platform
+                
+                for (let platform of game.platforms) {
+                    // Check if player is above platform and falling
+                    if (this.velocityY >= 0 &&
+                        this.y + this.height <= platform.y + 10 &&
+                        this.y + this.height + this.velocityY >= platform.y &&
+                        this.x + this.width > platform.x &&
+                        this.x < platform.x + platform.width) {
+                        this.y = platform.y - this.height;
+                        this.velocityY = 0;
+                        this.isJumping = false;
+                    }
+                }
+            },
+            checkLadderCollisions: function() {
+                this.isOnLadder = false;
+                
+                for (let ladder of game.ladders) {
+                    if (this.x + this.width > ladder.x &&
+                        this.x < ladder.x + ladder.width &&
+                        this.y + this.height > ladder.y &&
+                        this.y < ladder.y + ladder.height) {
+                        this.isOnLadder = true;
+                        
+                        // Center player on ladder when climbing
+                        if (game.keys.up || game.keys.down) {
+                            this.x = ladder.x + (ladder.width - this.width) / 2;
+                        }
+                        
+                        break;
+                    }
+                }
+            },
+            checkBarrelCollisions: function() {
+                for (let barrel of game.barrels) {
+                    if (this.x + this.width > barrel.x &&
+                        this.x < barrel.x + barrel.width &&
+                        this.y + this.height > barrel.y &&
+                        this.y < barrel.y + barrel.height) {
+                        playerHit();
+                        return;
+                    }
+                }
+            },
+            checkPrincessCollision: function() {
+                if (this.x + this.width > princess.x &&
+                    this.x < princess.x + princess.width &&
+                    this.y + this.height > princess.y &&
+                    this.y < princess.y + princess.height) {
+                    levelComplete();
+                }
+            }
+        };
+
+        // Gorilla object
+        let gorilla = {
+            element: null,
+            x: 50,
+            y: 50,
+            width: 50,
+            height: 50,
+            throwBarrel: function() {
+                if (Date.now() - game.lastBarrelTime > game.barrelInterval) {
+                    createBarrel(this.x + this.width / 2, this.y + this.height / 2);
+                    game.lastBarrelTime = Date.now();
+                    
+                    // Make barrels more frequent as level increases
+                    game.barrelInterval = Math.max(500, 2000 - (game.level - 1) * 300);
+                }
+            }
+        };
+
+        // Princess object
+        let princess = {
+            element: null,
+            x: 520,
+            y: 50,
+            width: 30,
+            height: 30
+        };
+
+        // Game initialization
+        function initGame() {
+            // Create game elements
+            const gameContainer = document.getElementById('game-container');
+            
+            // Create player
+            player.element = document.createElement('div');
+            player.element.id = 'player';
+            gameContainer.appendChild(player.element);
+            
+            // Create gorilla
+            gorilla.element = document.createElement('div');
+            gorilla.element.id = 'gorilla';
+            gameContainer.appendChild(gorilla.element);
+            
+            // Create princess
+            princess.element = document.createElement('div');
+            princess.element.id = 'princess';
+            gameContainer.appendChild(princess.element);
+            
+            // Set up input handlers
+            document.addEventListener('keydown', handleKeyDown);
+            document.addEventListener('keyup', handleKeyUp);
+            
+            // Set up buttons
+            document.getElementById('start-button').addEventListener('click', startGame);
+            document.getElementById('restart-button').addEventListener('click', restartGame);
+            document.getElementById('next-level-button').addEventListener('click', nextLevel);
+            
+            // Set up game state from saved values or defaults
+            updateUI();
+        }
+
+        function startGame() {
+            // Hide start screen
+            document.getElementById('start-screen').style.display = 'none';
+            
+            // Reset game state
+            resetLevel();
+            
+            // Start game loop
+            game.isRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function restartGame() {
+            // Reset game state
+            game.level = 1;
+            game.score = 0;
+            game.lives = 3;
+            
+            // Hide game over screen
+            document.getElementById('game-over').style.display = 'none';
+            
+            // Start new game
+            resetLevel();
+            updateUI();
+            game.isRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function nextLevel() {
+            // Increment level
+            game.level++;
+            
+            // Hide level complete screen
+            document.getElementById('level-complete').style.display = 'none';
+            
+            // Reset level
+            resetLevel();
+            
+            // Resume game
+            game.isRunning = true;
+            requestAnimationFrame(gameLoop);
+        }
+
+        function resetLevel() {
+            // Clear existing platforms, ladders, and barrels
+            clearLevel();
+            
+            // Create level layout based on current level
+            createLevel(game.level);
+            
+            // Reset player position
+            player.x = 30;
+            player.y = 350;
+            player.velocityX = 0;
+            player.velocityY = 0;
+            player.isJumping = false;
+            player.isOnLadder = false;
+            
+            // Update UI
+            updateUI();
+        }
+
+        function clearLevel() {
+            // Remove all platforms
+            for (let platform of game.platforms) {
+                platform.element.remove();
+            }
+            game.platforms = [];
+            
+            // Remove all ladders
+            for (let ladder of game.ladders) {
+                ladder.element.remove();
+            }
+            game.ladders = [];
+            
+            // Remove all barrels
+            for (let barrel of game.barrels) {
+                barrel.element.remove();
+            }
+            game.barrels = [];
+            
+            // Remove all particles
+            for (let particle of game.particles) {
+                particle.element.remove();
+            }
+            game.particles = [];
+        }
+
+        function createLevel(level) {
+            const gameContainer = document.getElementById('game-container');
+            const numPlatforms = 4 + Math.min(3, level - 1);
+            const platformSpacing = game.height / (numPlatforms + 1);
+            
+            // Create ground platform
+            createPlatform(0, game.height - 20, game.width);
+            
+            // Create tiered platforms
+            for (let i = 1; i < numPlatforms; i++) {
+                const y = game.height - (i + 1) * platformSpacing;
+                const width = game.width - 100;
+                
+                if (i % 2 === 1) {
+                    // Platform from left
+                    createPlatform(0, y, width);
+                } else {
+                    // Platform from right
+                    createPlatform(game.width - width, y, width);
+                }
+            }
+            
+            // Create ladders
+            for (let i = 0; i < numPlatforms - 1; i++) {
+                const fromPlatform = game.platforms[i];
+                const toPlatform = game.platforms[i + 1];
+                const ladderX = (i % 2 === 0) 
+                    ? fromPlatform.x + fromPlatform.width - 40 
+                    : fromPlatform.x + 10;
+                
+                createLadder(ladderX, toPlatform.y, fromPlatform.y - toPlatform.y);
+            }
+            
+            // Position gorilla on top platform
+            const topPlatform = game.platforms[game.platforms.length - 1];
+            gorilla.x = (topPlatform.x === 0) 
+                ? topPlatform.x + 10 
+                : topPlatform.x + topPlatform.width - 60;
+            gorilla.y = topPlatform.y - gorilla.height;
+            gorilla.element.style.left = gorilla.x + 'px';
+            gorilla.element.style.top = gorilla.y + 'px';
+            
+            // Position princess on top platform
+            princess.x = (topPlatform.x === 0) 
+                ? topPlatform.x + topPlatform.width - 40 
+                : topPlatform.x + 10;
+            princess.y = topPlatform.y - princess.height;
+            princess.element.style.left = princess.x + 'px';
+            princess.element.style.top = princess.y + 'px';
+            
+            // Reset barrel timer
+            game.lastBarrelTime = Date.now();
+            
+            // Adjust barrel interval based on level
+            game.barrelInterval = Math.max(500, 2000 - (level - 1) * 300);
+        }
+
+        function createPlatform(x, y, width) {
+            const gameContainer = document.getElementById('game-container');
+            const platformElement = document.createElement('div');
+            platformElement.className = 'platform';
+            platformElement.style.left = x + 'px';
+            platformElement.style.top = y + 'px';
+            platformElement.style.width = width + 'px';
+            gameContainer.appendChild(platformElement);
+            
+            game.platforms.push({
+                element: platformElement,
+                x: x,
+                y: y,
+                width: width,
+                height: 20
+            });
+        }
+
+        function createLadder(x, y, height) {
+            const gameContainer = document.getElementById('game-container');
+            const ladderElement = document.createElement('div');
+            ladderElement.className = 'ladder';
+            ladderElement.style.left = x + 'px';
+            ladderElement.style.top = y + 'px';
+            ladderElement.style.height = height + 'px';
+            gameContainer.appendChild(ladderElement);
+            
+            game.ladders.push({
+                element: ladderElement,
+                x: x,
+                y: y,
+                width: 30,
+                height: height
+            });
+        }
+
+        function createBarrel(x, y) {
+            const gameContainer = document.getElementById('game-container');
+            const barrelElement = document.createElement('div');
+            barrelElement.className = 'barrel';
+            barrelElement.style.left = x + 'px';
+            barrelElement.style.top = y + 'px';
+            gameContainer.appendChild(barrelElement);
+            
+            // Start with a direction based on platform direction
+            const nearestPlatformIndex = findNearestPlatformIndex(y);
+            const direction = (nearestPlatformIndex % 2 === 0) ? -3 : 3;
+            
+            game.barrels.push({
+                element: barrelElement,
+                x: x,
+                y: y,
+                width: 20,
+                height: 20,
+                velocityX: direction,
+                velocityY: 0,
+                onPlatform: null,
+                platformIndex: -1
+            });
+        }
+
+        function findNearestPlatformIndex(y) {
+            let nearestIndex = 0;
+            let minDistance = Infinity;
+            
+            for (let i = 0; i < game.platforms.length; i++) {
+                const distance = Math.abs(game.platforms[i].y - y);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    nearestIndex = i;
+                }
+            }
+            
+            return nearestIndex;
+        }
+
+        function createParticles(x, y, count) {
+            const gameContainer = document.getElementById('game-container');
+            
+            for (let i = 0; i < count; i++) {
+                const particleElement = document.createElement('div');
+                particleElement.className = 'particle';
+                particleElement.style.left = x + 'px';
+                particleElement.style.top = y + 'px';
+                gameContainer.appendChild(particleElement);
+                
+                game.particles.push({
+                    element: particleElement,
+                    x: x,
+                    y: y,
+                    velocityX: (Math.random() - 0.5) * 10,
+                    velocityY: -Math.random() * 10,
+                    life: 30
+                });
+            }
+        }
+
+        function updateBarrels() {
+            for (let i = game.barrels.length - 1; i >= 0; i--) {
+                const barrel = game.barrels[i];
+                let onPlatform = false;
+                
+                // Apply gravity
+                barrel.velocityY += game.gravity;
+                
+                // Update position
+                barrel.x += barrel.velocityX;
+                barrel.y += barrel.velocityY;
+                
+                // Check wall collisions
+                if (barrel.x < 0 || barrel.x + barrel.width > game.width) {
+                    barrel.velocityX *= -1;
+                    barrel.x = barrel.x < 0 ? 0 : game.width - barrel.width;
+                }
+                
+                // Check if barrel fell off bottom
+                if (barrel.y > game.height) {
+                    barrel.element.remove();
+                    game.barrels.splice(i, 1);
+                    game.score += 10;
+                    updateUI();
+                    continue;
+                }
+                
+                // Check platform collisions
+                for (let j = 0; j < game.platforms.length; j++) {
+                    const platform = game.platforms[j];
+                    if (barrel.velocityY > 0 &&
+                        barrel.y + barrel.height <= platform.y + 10 &&
+                        barrel.y + barrel.height + barrel.velocityY >= platform.y &&
+                        barrel.x + barrel.width > platform.x &&
+                        barrel.x < platform.x + platform.width) {
+                        barrel.y = platform.y - barrel.height;
+                        barrel.velocityY = 0;
+                        onPlatform = true;
+                        
+                        // If we've moved to a new platform, set direction based on platform
+                        if (barrel.platformIndex !== j) {
+                            barrel.platformIndex = j;
+                            
+                            // Alternate barrel direction based on platform
+                            // For even-indexed platforms (0, 2, 4...), barrels go left
+                            // For odd-indexed platforms (1, 3, 5...), barrels go right
+                            if (j % 2 === 0) {
+                                barrel.velocityX = -3;
+                            } else {
+                                barrel.velocityX = 3;
+                            }
+                        }
+                        
+                        // Check if barrel is at the edge of platform
+                        const distanceToLeftEdge = barrel.x - platform.x;
+                        const distanceToRightEdge = (platform.x + platform.width) - (barrel.x + barrel.width);
+                        
+                        // If barrel is near edge of platform, make it fall
+                        if (distanceToLeftEdge < 5 && barrel.velocityX < 0) {
+                            // Near left edge and moving left, make it fall
+                            barrel.velocityY = 1;
+                        } else if (distanceToRightEdge < 5 && barrel.velocityX > 0) {
+                            // Near right edge and moving right, make it fall
+                            barrel.velocityY = 1;
+                        }
+                        
+                        break;
+                    }
+                }
+                
+                // If we're not on any platform, we must be falling between platforms
+                barrel.onPlatform = onPlatform;
+                
+                // Update element position
+                barrel.element.style.left = barrel.x + 'px';
+                barrel.element.style.top = barrel.y + 'px';
+            }
+        }
+
+        function updateParticles() {
+            for (let i = game.particles.length - 1; i >= 0; i--) {
+                const particle = game.particles[i];
+                
+                // Apply gravity
+                particle.velocityY += game.gravity * 0.5;
+                
+                // Update position
+                particle.x += particle.velocityX;
+                particle.y += particle.velocityY;
+                
+                // Update life
+                particle.life--;
+                
+                // Check if particle is dead
+                if (particle.life <= 0) {
+                    particle.element.remove();
+                    game.particles.splice(i, 1);
+                    continue;
+                }
+                
+                // Update element position and opacity
+                particle.element.style.left = particle.x + 'px';
+                particle.element.style.top = particle.y + 'px';
+                particle.element.style.opacity = particle.life / 30;
+            }
+        }
+
+        function playerHit() {
+            game.lives--;
+            createParticles(player.x + player.width/2, player.y + player.height/2, 20);
+            updateUI();
+            
+            if (game.lives <= 0) {
+                gameOver();
+            } else {
+                // Reset player position
+                player.x = 30;
+                player.y = 350;
+                player.velocityX = 0;
+                player.velocityY = 0;
+                player.isJumping = false;
+                player.isOnLadder = false;
+            }
+        }
+
+        function gameOver() {
+            game.isRunning = false;
+            document.getElementById('final-score').textContent = game.score;
+            document.getElementById('game-over').style.display = 'flex';
+        }
+
+        function levelComplete() {
+            game.isRunning = false;
+            game.score += 100 * game.level;
+            updateUI();
+            document.getElementById('level-score').textContent = game.score;
+            document.getElementById('level-complete').style.display = 'flex';
+        }
+
+        function updateUI() {
+            document.getElementById('level').textContent = game.level;
+            document.getElementById('score').textContent = game.score;
+            document.getElementById('lives').textContent = game.lives;
+        }
+
+        function gameLoop() {
+            if (!game.isRunning) return;
+            
+            // Update player
+            player.checkLadderCollisions();
+            player.update();
+            player.checkPlatformCollisions();
+            player.checkBarrelCollisions();
+            player.checkPrincessCollision();
+            
+            // Update gorilla and throw barrels
+            gorilla.throwBarrel();
+            
+            // Update barrels
+            updateBarrels();
+            
+            // Update particles
+            updateParticles();
+            
+            // Continue game loop
+            requestAnimationFrame(gameLoop);
+        }
+
+        function handleKeyDown(e) {
+            switch(e.key) {
+                case 'ArrowLeft':
+                case 'a':
+                    game.keys.left = true;
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    game.keys.right = true;
+                    break;
+                case 'ArrowUp':
+                case 'w':
+                    game.keys.up = true;
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    game.keys.down = true;
+                    break;
+                case ' ':
+                    game.keys.space = true;
+                    e.preventDefault(); // Prevent page scrolling
+                    break;
+                // Add debug toggle
+                case 'D':
+                    game.debug = !game.debug;
+                    break;
+            }
+        }
+
+        function handleKeyUp(e) {
+            switch(e.key) {
+                case 'ArrowLeft':
+                case 'a':
+                    game.keys.left = false;
+                    break;
+                case 'ArrowRight':
+                case 'd':
+                    game.keys.right = false;
+                    break;
+                case 'ArrowUp':
+                case 'w':
+                    game.keys.up = false;
+                    break;
+                case 'ArrowDown':
+                case 's':
+                    game.keys.down = false;
+                    break;
+                case ' ':
+                    game.keys.space = false;
+                    break;
+            }
+        }
+
+        // Initialize game on load
+        window.addEventListener('load', initGame);
+    </script>
+</body>
+</html>
